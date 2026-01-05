@@ -67,17 +67,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+      <Card className="w-full max-w-md shadow-xl border-2">
+        <CardHeader className="space-y-1 text-center">
+          <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+            <span className="text-2xl">📝</span>
+          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             Redação Nota Mil
           </CardTitle>
-          <CardDescription className="text-center">
-            Entre com suas credenciais
+          <CardDescription className="text-base">
+            Entre com suas credenciais para acessar o sistema
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -102,9 +105,12 @@ export default function LoginPage() {
                 disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={loading}>
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
+            <div className="text-center text-sm text-muted-foreground pt-2">
+              <p>Usuários de teste disponíveis no README</p>
+            </div>
           </form>
         </CardContent>
       </Card>
