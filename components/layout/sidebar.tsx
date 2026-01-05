@@ -46,6 +46,7 @@ const adminMenu = [
   { href: '/admin/turmas', label: 'Turmas', icon: Users },
   { href: '/admin/alunos', label: 'Alunos', icon: Users },
   { href: '/admin/professores', label: 'Professores', icon: Users },
+  { href: '/admin/contratos', label: 'Contratos', icon: FileText },
   { href: '/admin/financeiro', label: 'Financeiro', icon: TrendingUp },
   { href: '/admin/relatorios', label: 'Relatórios', icon: FileText },
   { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },

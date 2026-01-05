@@ -1,13 +1,19 @@
-import { getCurrentUser } from '@/lib/get-session'
-import { prisma } from '@/lib/prisma'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, FileText, Clock, TrendingUp } from 'lucide-react'
+import { getCurrentUser } from "@/lib/get-session";
+import { prisma } from "@/lib/prisma";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Users, FileText, Clock, TrendingUp } from "lucide-react";
 
 export default async function ProfessorDashboard() {
-  const user = await getCurrentUser()
-  
+  const user = await getCurrentUser();
+
   if (!user) {
-    return null
+    return null;
   }
 
   const professor = await prisma.professor.findUnique({
@@ -23,42 +29,40 @@ export default async function ProfessorDashboard() {
       correcoes: {
         where: {
           redacao: {
-            status: 'EM_CORRECAO',
+            status: "EM_CORRECAO",
           },
         },
       },
     },
-  })
+  });
 
-  const turmasAtivas = professor?.turmas.filter((t: any) => t.status === 'ATIVA').length || 0
-  const totalAlunos = professor?.turmas.reduce((acc: number, t: any) => {
-    const count = t._count?.alunos || 0
-    return acc + count
-  }, 0) || 0
+  const turmasAtivas =
+    professor?.turmas.filter((t: any) => t.status === "ATIVA").length || 0;
+  const totalAlunos =
+    professor?.turmas.reduce((acc: number, t: any) => {
+      const count = t._count?.alunos || 0;
+      return acc + count;
+    }, 0) || 0;
   const correcoesPendentes = await prisma.redacao.count({
     where: {
-      status: 'EM_CORRECAO',
+      status: "EM_CORRECAO",
       turma: {
         professorId: professor?.id,
       },
     },
-  })
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Bem-vindo, {user.nome}!
-        </p>
+        <p className="text-muted-foreground">Bem-vindo, {user.nome}!</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Turmas Ativas
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Turmas Ativas</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -92,9 +96,7 @@ export default async function ProfessorDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Tempo Médio
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -142,13 +144,12 @@ export default async function ProfessorDashboard() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {correcoesPendentes === 0
-                ? 'Nenhuma correção pendente!'
+                ? "Nenhuma correção pendente!"
                 : `${correcoesPendentes} redações aguardando correção.`}
             </p>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
-

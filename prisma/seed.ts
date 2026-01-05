@@ -155,7 +155,12 @@ async function main() {
       valorFinal: plano.valor - (plano.valor * plano.descontoAvista / 100),
       parcelas: 1,
       status: 'ATIVO',
+      modalidade: 'PRESENCIAL',
+      assinadoPresencial: true,
       assinadoEm: new Date(),
+      assinadoPor: 'Secretaria',
+      termos: 'Contrato de prestação de serviços educacionais - Modalidade PRESENCIAL. Todas as aulas serão ministradas presencialmente.',
+      termosPresencial: 'Contrato de prestação de serviços educacionais - Modalidade PRESENCIAL. Todas as aulas serão ministradas presencialmente.',
     },
   })
 

@@ -572,11 +572,15 @@ model Contrato {
   valorFinal  Float
   parcelas    Int           @default(1)
   status      StatusContrato @default(RASCUNHO)
+  modalidade  String        @default("PRESENCIAL") // PRESENCIAL, ONLINE, HIBRIDO (sempre PRESENCIAL)
   assinadoEm  DateTime?
+  assinadoPresencial Boolean @default(true) // Sempre true - contrato apenas presencial
   arquivo     String?       // PDF do contrato assinado
   termos      String?       @db.Text
+  termosPresencial String?  @db.Text // Termos específicos para modalidade presencial
   aceiteIP    String?
   aceiteUserAgent String?
+  assinadoPor String?       // Nome de quem assinou presencialmente
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -585,6 +589,7 @@ model Contrato {
 
   @@index([matriculaId])
   @@index([status])
+  @@index([modalidade])
   @@map("contratos")
 }
 
