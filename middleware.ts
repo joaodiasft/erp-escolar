@@ -3,21 +3,31 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   const sessionToken = request.cookies.get('session_token')?.value
+  const pathname = request.nextUrl.pathname
 
-  // Rotas públicas
-  const publicRoutes = ['/login', '/api/auth/login']
+  // Rotas públicas (não precisam de autenticação)
+  const publicRoutes = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/test']
   const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
+    pathname.startsWith(route)
+  )
+
+  // Rotas de API públicas
+  const isPublicApi = pathname.startsWith('/api/') && (
+    pathname.startsWith('/api/auth/') || 
+    pathname.startsWith('/api/public/')
   )
 
   // Se for rota pública, permitir acesso
-  if (isPublicRoute) {
+  if (isPublicRoute || isPublicApi) {
     return NextResponse.next()
   }
 
   // Se não tiver token e não for rota pública, redirecionar para login
   if (!sessionToken && !isPublicRoute) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const loginUrl = new URL('/login', request.url)
+    // Adicionar redirectTo para voltar após login
+    loginUrl.searchParams.set('redirectTo', pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   return NextResponse.next()

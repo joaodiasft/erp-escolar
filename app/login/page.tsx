@@ -33,28 +33,38 @@ export default function LoginPage() {
         throw new Error(data.error || 'Erro ao fazer login')
       }
 
-      toast({
-        title: 'Login realizado!',
-        description: 'Redirecionando...',
-      })
-
-      // Redirecionar baseado no role
+      // Determinar rota de redirecionamento baseado no role
+      let redirectPath = '/'
       switch (data.user.role) {
         case 'ALUNO':
-          router.push('/aluno')
+          redirectPath = '/aluno'
           break
         case 'PROFESSOR':
-          router.push('/professor')
+          redirectPath = '/professor'
           break
         case 'ADMIN_COORDENACAO':
         case 'ADMIN_SECRETARIA':
         case 'ADMIN_FINANCEIRO':
         case 'ADMIN_SUPER':
-          router.push('/admin')
+          redirectPath = '/admin'
           break
         default:
-          router.push('/')
+          redirectPath = '/'
       }
+
+      console.log('Redirecionando para:', redirectPath, 'Role:', data.user.role)
+
+      toast({
+        title: 'Login realizado!',
+        description: 'Redirecionando...',
+      })
+
+      // Pequeno delay para garantir que o toast seja exibido
+      setTimeout(() => {
+        // Usar window.location.href para forçar recarga completa
+        // Isso garante que o cookie seja lido corretamente
+        window.location.href = redirectPath
+      }, 500)
     } catch (error: any) {
       toast({
         title: 'Erro',

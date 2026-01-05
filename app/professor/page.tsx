@@ -58,7 +58,8 @@ export default async function ProfessorDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Bem-vindo, <span className="font-semibold text-foreground">{user.nome}</span>!
+            Bem-vindo,{" "}
+            <span className="font-semibold text-foreground">{user.nome}</span>!
           </p>
         </div>
       </div>
