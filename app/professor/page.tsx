@@ -30,8 +30,11 @@ export default async function ProfessorDashboard() {
     },
   })
 
-  const turmasAtivas = professor?.turmas.filter(t => t.status === 'ATIVA').length || 0
-  const totalAlunos = professor?.turmas.reduce((acc, t) => acc + t._count.alunos, 0) || 0
+  const turmasAtivas = professor?.turmas.filter((t: any) => t.status === 'ATIVA').length || 0
+  const totalAlunos = professor?.turmas.reduce((acc: number, t: any) => {
+    const count = t._count?.alunos || 0
+    return acc + count
+  }, 0) || 0
   const correcoesPendentes = await prisma.redacao.count({
     where: {
       status: 'EM_CORRECAO',
@@ -113,7 +116,7 @@ export default async function ProfessorDashboard() {
               </p>
             ) : (
               <div className="space-y-2">
-                {professor?.turmas.map((turma) => (
+                {professor?.turmas.map((turma: any) => (
                   <div
                     key={turma.id}
                     className="flex items-center justify-between rounded-lg border p-3"
@@ -121,7 +124,7 @@ export default async function ProfessorDashboard() {
                     <div>
                       <p className="font-medium">{turma.nome}</p>
                       <p className="text-sm text-muted-foreground">
-                        {turma._count.alunos} alunos
+                        {turma._count?.alunos || 0} alunos
                       </p>
                     </div>
                   </div>
