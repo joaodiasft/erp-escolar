@@ -1,0 +1,777 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTENTICAÇÃO E USUÁRIOS
+// ============================================
+
+enum Role {
+  ALUNO
+  PROFESSOR
+  ADMIN_COORDENACAO
+  ADMIN_SECRETARIA
+  ADMIN_FINANCEIRO
+  ADMIN_SUPER
+}
+
+enum StatusUsuario {
+  ATIVO
+  INATIVO
+  BLOQUEADO
+  PENDENTE_ATIVACAO
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  password      String
+  nome          String
+  cpf           String?       @unique
+  telefone      String?
+  avatar        String?
+  role          Role
+  status        StatusUsuario @default(ATIVO)
+  emailVerified DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  // Relações
+  aluno              Aluno?
+  professor          Professor?
+  admin              Admin?
+  auditoria          Auditoria[]
+  notificacoes       Notificacao[]
+  mensagensEnviadas  Mensagem[] @relation("MensagensEnviadas")
+  mensagensRecebidas Mensagem[] @relation("MensagensRecebidas")
+  acessosMaterial    AcessoMaterial[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+// ============================================
+// ACADÊMICO
+// ============================================
+
+model Turma {
+  id          String   @id @default(cuid())
+  nome        String
+  descricao   String?
+  horario     String   // Ex: "Terça 19h-20h30"
+  diaSemana   Int      // 0=Dom, 1=Seg, etc
+  horaInicio  String   // "19:00"
+  horaFim     String   // "20:30"
+  sala        String?
+  capacidade  Int      @default(30)
+  status      String   @default("ATIVA") // ATIVA, ENCERRADA, CANCELADA
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  professorId String
+  professor   Professor @relation(fields: [professorId], references: [id])
+  alunos      Matricula[]
+  modulos     Modulo[]
+  encontros   Encontro[]
+  materiais   Material[]
+  atividades  Atividade[]
+  redacoes    Redacao[]
+  mural       Mural[]
+
+  @@index([professorId])
+  @@index([status])
+  @@map("turmas")
+}
+
+model Aluno {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ra        String?  @unique // Registro Acadêmico
+  dataNasc  DateTime?
+  endereco  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Relações
+  matriculas Matricula[]
+  presencas  Presenca[]
+  entregas   Entrega[]
+  redacoes   Redacao[]
+  pagamentos Pagamento[]
+
+  @@index([userId])
+  @@map("alunos")
+}
+
+model Professor {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formacao  String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Relações
+  turmas     Turma[]
+  correcoes  Correcao[]
+  planejamentos Planejamento[]
+
+  @@index([userId])
+  @@map("professores")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departamento String? // COORDENACAO, SECRETARIA, FINANCEIRO
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@map("admins")
+}
+
+model Matricula {
+  id        String   @id @default(cuid())
+  alunoId   String
+  aluno     Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  turmaId   String
+  turma     Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  status    String   @default("ATIVA") // ATIVA, TRANCADA, CANCELADA, CONCLUIDA
+  dataInicio DateTime @default(now())
+  dataFim   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Relações
+  contrato  Contrato?
+  pagamentos Pagamento[]
+
+  @@unique([alunoId, turmaId])
+  @@index([alunoId])
+  @@index([turmaId])
+  @@index([status])
+  @@map("matriculas")
+}
+
+// ============================================
+// MÓDULOS E ENCONTROS
+// ============================================
+
+model Modulo {
+  id          String   @id @default(cuid())
+  turmaId     String
+  turma       Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  nome        String
+  descricao   String?
+  ordem       Int
+  dataInicio  DateTime
+  dataFim     DateTime
+  status      String   @default("PLANEJADO") // PLANEJADO, EM_ANDAMENTO, CONCLUIDO
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  encontros   Encontro[]
+  materiais   Material[]
+  atividades  Atividade[]
+
+  @@index([turmaId])
+  @@index([ordem])
+  @@map("modulos")
+}
+
+model Encontro {
+  id          String   @id @default(cuid())
+  turmaId     String
+  turma       Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  moduloId    String?
+  modulo      Modulo?  @relation(fields: [moduloId], references: [id], onDelete: SetNull)
+  data        DateTime
+  horaInicio  String
+  horaFim     String
+  tema        String?
+  descricao   String?
+  sala        String?
+  status      String   @default("AGENDADO") // AGENDADO, REALIZADO, CANCELADO, ADIADO
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  planejamento Planejamento?
+  presencas    Presenca[]
+  materiais    Material[]
+
+  @@index([turmaId])
+  @@index([moduloId])
+  @@index([data])
+  @@map("encontros")
+}
+
+model Planejamento {
+  id          String   @id @default(cuid())
+  encontroId  String   @unique
+  encontro    Encontro @relation(fields: [encontroId], references: [id], onDelete: Cascade)
+  professorId String
+  professor   Professor @relation(fields: [professorId], references: [id])
+  objetivos   String?
+  conteudo    String?  @db.Text
+  metodologia String?  @db.Text
+  recursos    String?  @db.Text
+  avaliacao   String?  @db.Text
+  observacoes String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([professorId])
+  @@map("planejamentos")
+}
+
+// ============================================
+// PRESENÇA
+// ============================================
+
+model Presenca {
+  id          String   @id @default(cuid())
+  alunoId     String
+  aluno       Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  encontroId  String
+  encontro    Encontro @relation(fields: [encontroId], references: [id], onDelete: Cascade)
+  status      String   // PRESENTE, FALTA, JUSTIFICADA, ABONADA
+  justificativa String? @db.Text
+  anexoJustificativa String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([alunoId, encontroId])
+  @@index([alunoId])
+  @@index([encontroId])
+  @@map("presencas")
+}
+
+// ============================================
+// MATERIAIS E CONTEÚDOS
+// ============================================
+
+enum TipoMaterial {
+  PDF
+  VIDEO
+  LINK
+  IMAGEM
+  DOCUMENTO
+  APRESENTACAO
+}
+
+model Material {
+  id          String       @id @default(cuid())
+  titulo      String
+  descricao   String?      @db.Text
+  tipo        TipoMaterial
+  url         String?
+  arquivo     String?      // Path no storage
+  tamanho     Int?         // bytes
+  ordem       Int          @default(0)
+  publico     Boolean      @default(false)
+  turmaId     String?
+  turma       Turma?       @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  moduloId    String?
+  modulo      Modulo?      @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  encontroId  String?
+  encontro    Encontro?   @relation(fields: [encontroId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  acessos     AcessoMaterial[]
+
+  @@index([turmaId])
+  @@index([moduloId])
+  @@index([encontroId])
+  @@map("materiais")
+}
+
+model AcessoMaterial {
+  id        String   @id @default(cuid())
+  materialId String
+  material  Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  acessadoEm DateTime @default(now())
+
+  @@unique([materialId, userId])
+  @@index([materialId])
+  @@index([userId])
+  @@map("acessos_materiais")
+}
+
+// ============================================
+// ATIVIDADES E AVALIAÇÕES
+// ============================================
+
+model Atividade {
+  id          String   @id @default(cuid())
+  turmaId     String
+  turma       Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  moduloId    String?
+  modulo      Modulo?  @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  titulo      String
+  descricao   String?  @db.Text
+  tipo        String   // TAREFA, PROVA, TRABALHO
+  prazo       DateTime?
+  valor       Float?   // Pontuação máxima
+  instrucoes  String?  @db.Text
+  anexos      String?  // JSON array de arquivos
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  entregas    Entrega[]
+
+  @@index([turmaId])
+  @@index([moduloId])
+  @@index([prazo])
+  @@map("atividades")
+}
+
+model Entrega {
+  id          String   @id @default(cuid())
+  alunoId     String
+  aluno       Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  atividadeId String
+  atividade   Atividade @relation(fields: [atividadeId], references: [id], onDelete: Cascade)
+  versao      Int      @default(1)
+  texto       String?  @db.Text
+  arquivo     String?  // Path no storage
+  nota        Float?
+  feedback    String?  @db.Text
+  status      String   @default("ENTREGUE") // ENTREGUE, CORRIGIDA, REENTREGUE, PENDENTE
+  entregueEm  DateTime @default(now())
+  corrigidoEm DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([alunoId])
+  @@index([atividadeId])
+  @@index([status])
+  @@map("entregas")
+}
+
+// ============================================
+// REDAÇÃO ENEM (NÚCLEO DO SISTEMA)
+// ============================================
+
+enum StatusRedacao {
+  RASCUNHO
+  ENVIADA
+  EM_CORRECAO
+  CORRIGIDA
+  REESCRITA_SOLICITADA
+  REESCRITA_ENVIADA
+  ARQUIVADA
+}
+
+model TemaRedacao {
+  id          String   @id @default(cuid())
+  titulo      String
+  proposta    String   @db.Text
+  textosBase  String?  @db.Text // JSON array
+  nivel       String   @default("MEDIO") // FACIL, MEDIO, DIFICIL
+  tags        String?  // JSON array
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  redacoes    Redacao[]
+
+  @@index([ativo])
+  @@map("temas_redacao")
+}
+
+model Redacao {
+  id          String        @id @default(cuid())
+  alunoId     String
+  aluno       Aluno         @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  turmaId     String
+  turma       Turma         @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  temaId      String?
+  tema        TemaRedacao?  @relation(fields: [temaId], references: [id], onDelete: SetNull)
+  temaCustom  String?       // Se não usar tema do banco
+  proposta    String?       @db.Text
+  versao      Int           @default(1)
+  rascunho    String?       @db.Text
+  texto       String        @db.Text
+  arquivo     String?       // PDF/Imagem da redação
+  status      StatusRedacao @default(RASCUNHO)
+  prioridade  Int           @default(0) // Para fila inteligente
+  prazo       DateTime?
+  enviadoEm   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  correcoes   Correcao[]
+  reescritas  Reescrita[]
+
+  @@index([alunoId])
+  @@index([turmaId])
+  @@index([status])
+  @@index([prioridade])
+  @@index([prazo])
+  @@map("redacoes")
+}
+
+model Correcao {
+  id          String   @id @default(cuid())
+  redacaoId   String
+  redacao     Redacao  @relation(fields: [redacaoId], references: [id], onDelete: Cascade)
+  professorId String
+  professor   Professor @relation(fields: [professorId], references: [id])
+  versao      Int      @default(1)
+  
+  // Notas por competência ENEM
+  notaC1      Float    // Domínio da norma padrão
+  notaC2      Float    // Compreensão da proposta
+  notaC3      Float    // Argumentação
+  notaC4      Float    // Coesão e coerência
+  notaC5      Float    // Proposta de intervenção
+  notaTotal   Float
+  
+  // Comentários
+  comentarios String?  @db.Text // JSON: {competencia: string, trecho: string, comentario: string}[]
+  observacoes String?  @db.Text
+  feedbackAudio String? // URL do áudio
+  feedbackVideo String? // URL do vídeo
+  
+  // Rubrica
+  rubrica     String?  @db.Text // JSON com checklist
+  
+  // IA Assistida
+  sugestoesIA String?  @db.Text // JSON com sugestões da IA
+  confirmadoIA Boolean  @default(false)
+  
+  corrigidoEm DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([redacaoId])
+  @@index([professorId])
+  @@index([corrigidoEm])
+  @@map("correcoes")
+}
+
+model Reescrita {
+  id          String   @id @default(cuid())
+  redacaoId   String
+  redacao     Redacao  @relation(fields: [redacaoId], references: [id], onDelete: Cascade)
+  correcaoId  String?  // Correção que gerou a reescrita
+  tarefas     String?  @db.Text // JSON: tarefas específicas por competência
+  prazo       DateTime?
+  status      String   @default("PENDENTE") // PENDENTE, EM_ANDAMENTO, CONCLUIDA
+  solicitadoEm DateTime @default(now())
+  concluidoEm DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([redacaoId])
+  @@index([status])
+  @@map("reescritas")
+}
+
+model ObservacaoPadrao {
+  id          String   @id @default(cuid())
+  competencia String   // C1, C2, C3, C4, C5
+  categoria   String?  // Ex: "Erro de concordância", "Falta de conectivo"
+  texto       String   @db.Text
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([competencia])
+  @@index([ativo])
+  @@map("observacoes_padrao")
+}
+
+// ============================================
+// FINANCEIRO
+// ============================================
+
+enum TipoPlano {
+  MENSAL
+  MODULO
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+  PACOTE
+}
+
+enum StatusContrato {
+  RASCUNHO
+  AGUARDANDO_ASSINATURA
+  ATIVO
+  SUSPENSO
+  CANCELADO
+  ENCERRADO
+}
+
+model PlanoPagamento {
+  id          String     @id @default(cuid())
+  nome        String
+  descricao   String?    @db.Text
+  tipo        TipoPlano
+  valor       Float
+  descontoAvista Float?  @default(0)
+  parcelas    Int        @default(1)
+  duracaoMeses Int?
+  ativo       Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  // Relações
+  contratos   Contrato[]
+
+  @@index([ativo])
+  @@map("planos_pagamento")
+}
+
+model Contrato {
+  id          String        @id @default(cuid())
+  matriculaId String        @unique
+  matricula   Matricula     @relation(fields: [matriculaId], references: [id], onDelete: Cascade)
+  planoId     String
+  plano       PlanoPagamento @relation(fields: [planoId], references: [id])
+  valor       Float
+  desconto    Float         @default(0)
+  valorFinal  Float
+  parcelas    Int           @default(1)
+  status      StatusContrato @default(RASCUNHO)
+  assinadoEm  DateTime?
+  arquivo     String?       // PDF do contrato assinado
+  termos      String?       @db.Text
+  aceiteIP    String?
+  aceiteUserAgent String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relações
+  cobrancas   Cobranca[]
+
+  @@index([matriculaId])
+  @@index([status])
+  @@map("contratos")
+}
+
+enum StatusCobranca {
+  PENDENTE
+  PAGA
+  VENCIDA
+  CANCELADA
+  ESTORNADA
+}
+
+enum MetodoPagamento {
+  PIX
+  BOLETO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  DINHEIRO
+  TRANSFERENCIA
+  MANUAL
+}
+
+model Cobranca {
+  id              String          @id @default(cuid())
+  contratoId      String
+  contrato        Contrato        @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  numero          Int             // Número da parcela
+  valor           Float
+  vencimento      DateTime
+  status          StatusCobranca  @default(PENDENTE)
+  metodoPagamento MetodoPagamento?
+  pagoEm          DateTime?
+  codigoPix       String?
+  codigoBarras    String?
+  observacoes     String?         @db.Text
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relações
+  pagamentos      Pagamento[]
+
+  @@index([contratoId])
+  @@index([status])
+  @@index([vencimento])
+  @@map("cobrancas")
+}
+
+model Pagamento {
+  id          String          @id @default(cuid())
+  alunoId     String
+  aluno       Aluno           @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  cobrancaId  String?
+  cobranca    Cobranca?       @relation(fields: [cobrancaId], references: [id], onDelete: SetNull)
+  valor       Float
+  metodo      MetodoPagamento
+  comprovante String?         // Path do arquivo
+  observacoes String?         @db.Text
+  confirmado  Boolean         @default(false)
+  confirmadoPor String?       // User ID
+  confirmadoEm DateTime?
+  pagoEm      DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([alunoId])
+  @@index([cobrancaId])
+  @@index([confirmado])
+  @@map("pagamentos")
+}
+
+model Cupom {
+  id          String   @id @default(cuid())
+  codigo      String   @unique
+  descricao   String?
+  tipo        String   // PERCENTUAL, FIXO
+  valor       Float
+  valorMinimo Float?
+  maxUsos     Int?
+  usos        Int      @default(0)
+  validoDe    DateTime
+  validoAte   DateTime
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([codigo])
+  @@index([ativo])
+  @@map("cupons")
+}
+
+// ============================================
+// COMUNICAÇÃO
+// ============================================
+
+model Mural {
+  id          String   @id @default(cuid())
+  turmaId     String
+  turma       Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  titulo      String
+  conteudo    String   @db.Text
+  anexos      String?  // JSON array
+  fixo        Boolean  @default(false)
+  publicadoEm DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([turmaId])
+  @@index([fixo])
+  @@map("murais")
+}
+
+model Mensagem {
+  id          String   @id @default(cuid())
+  remetenteId String
+  remetente   User     @relation("MensagensEnviadas", fields: [remetenteId], references: [id], onDelete: Cascade)
+  destinatarioId String
+  destinatario User    @relation("MensagensRecebidas", fields: [destinatarioId], references: [id], onDelete: Cascade)
+  assunto     String?
+  conteudo    String   @db.Text
+  lida        Boolean  @default(false)
+  lidaEm      DateTime?
+  anexos      String?  // JSON array
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([remetenteId])
+  @@index([destinatarioId])
+  @@index([lida])
+  @@map("mensagens")
+}
+
+model Notificacao {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tipo        String   // CORRECAO, PAGAMENTO, AULA, MENSAGEM, etc
+  titulo      String
+  conteudo    String   @db.Text
+  link        String?
+  lida        Boolean  @default(false)
+  lidaEm      DateTime?
+  enviadaEm   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([lida])
+  @@index([tipo])
+  @@map("notificacoes")
+}
+
+// ============================================
+// AUDITORIA E CONFIGURAÇÕES
+// ============================================
+
+model Auditoria {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  acao        String   // CREATE, UPDATE, DELETE, LOGIN, etc
+  entidade    String   // Nome da tabela
+  entidadeId  String?
+  dadosAntigos String? @db.Text // JSON
+  dadosNovos  String?  @db.Text // JSON
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entidade])
+  @@index([acao])
+  @@index([createdAt])
+  @@map("auditoria")
+}
+
+model Configuracao {
+  id          String   @id @default(cuid())
+  chave       String   @unique
+  valor       String   @db.Text
+  tipo        String   @default("STRING") // STRING, NUMBER, BOOLEAN, JSON
+  descricao   String?
+  categoria   String?  // ACADEMICO, FINANCEIRO, NOTIFICACAO, etc
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([chave])
+  @@index([categoria])
+  @@map("configuracoes")
+}
+
