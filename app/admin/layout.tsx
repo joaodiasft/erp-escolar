@@ -18,7 +18,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <MainLayout role={user.role} nome={user.nome}>
+    <MainLayout role={user.role} nome={user.nome} userId={user.id}>
       {children}
     </MainLayout>
   )

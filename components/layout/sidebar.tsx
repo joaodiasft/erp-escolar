@@ -17,10 +17,12 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Role } from '@prisma/client'
+import { NotificacoesDropdown } from '@/components/notificacoes/notificacoes-dropdown'
 
 interface SidebarProps {
   role: Role
   nome: string
+  userId: string
 }
 
 const alunoMenu = [
@@ -52,7 +54,7 @@ const adminMenu = [
   { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
-export function Sidebar({ role, nome }: SidebarProps) {
+export function Sidebar({ role, nome, userId }: SidebarProps) {
   const pathname = usePathname()
 
   const getMenu = () => {
