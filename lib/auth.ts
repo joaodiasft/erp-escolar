@@ -39,28 +39,44 @@ export async function authenticateUser(
   email: string,
   password: string
 ) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      aluno: true,
-      professor: true,
-      admin: true,
-    },
-  })
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        aluno: true,
+        professor: true,
+        admin: true,
+      },
+    })
 
-  if (!user || user.status !== 'ATIVO') {
-    return null
+    if (process.env.NODE_ENV === 'development') {
+      console.log('User found:', user ? 'Yes' : 'No')
+      if (user) {
+        console.log('User status:', user.status)
+      }
+    }
+
+    if (!user || user.status !== 'ATIVO') {
+      return null
+    }
+
+    const isValid = await verifyPassword(password, user.password)
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Password valid:', isValid)
+    }
+
+    if (!isValid) {
+      return null
+    }
+
+    const { password: _, ...userWithoutPassword } = user
+
+    return userWithoutPassword
+  } catch (error) {
+    console.error('Error in authenticateUser:', error)
+    throw error
   }
-
-  const isValid = await verifyPassword(password, user.password)
-
-  if (!isValid) {
-    return null
-  }
-
-  const { password: _, ...userWithoutPassword } = user
-
-  return userWithoutPassword
 }
 
 export function hasPermission(userRole: Role, requiredRole: Role | Role[]): boolean {

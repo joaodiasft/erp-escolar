@@ -6,6 +6,11 @@ import { createSession } from '@/lib/session-store'
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
+    
+    // Log para debug (remover em produção)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Login attempt:', { email })
+    }
 
     if (!email || !password) {
       return NextResponse.json(
@@ -53,7 +58,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Login error:', error)
     return NextResponse.json(
-      { error: 'Erro ao fazer login' },
+      { error: error.message || 'Erro ao fazer login', details: process.env.NODE_ENV === 'development' ? error.stack : undefined },
       { status: 500 }
     )
   }

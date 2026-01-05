@@ -29,6 +29,7 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (!res.ok) {
+        console.error('Login error:', data)
         throw new Error(data.error || 'Erro ao fazer login')
       }
 
