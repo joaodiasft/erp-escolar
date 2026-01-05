@@ -72,8 +72,9 @@ export function Sidebar({ role, nome, userId }: SidebarProps) {
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-card shadow-sm">
-      <div className="flex h-16 items-center border-b px-6 bg-primary/5">
+      <div className="flex h-16 items-center justify-between border-b px-6 bg-primary/5">
         <h1 className="text-xl font-bold text-primary">Redação Nota Mil</h1>
+        <NotificacoesDropdown userId={userId} />
       </div>
       <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
         <nav className="space-y-1">
